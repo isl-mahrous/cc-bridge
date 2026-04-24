@@ -44,3 +44,17 @@ describe('App → ProjectStep', () => {
     expect(lastFrame()).toContain('/tmp/proj');
   });
 });
+
+describe('App → SessionStep', () => {
+  it('shows the session row after picking CLI → project', async () => {
+    const { lastFrame, stdin } = render(<App />);
+    await new Promise((r) => setTimeout(r, 20));
+    stdin.write('\r'); // source: CLI
+    await new Promise((r) => setTimeout(r, 100));
+    stdin.write('\r'); // project: /tmp/proj
+    await new Promise((r) => setTimeout(r, 100));
+    expect(lastFrame()).toContain('Sessions');
+    expect(lastFrame()).toContain('aaaaaaaa');
+    expect(lastFrame()).toMatch(/Hi/);
+  });
+});
