@@ -58,3 +58,20 @@ describe('App → SessionStep', () => {
     expect(lastFrame()).toMatch(/Hi/);
   });
 });
+
+describe('App → ActionStep', () => {
+  it('renders actions after picking a session', async () => {
+    const { lastFrame, stdin } = render(<App />);
+    await new Promise((r) => setTimeout(r, 20));
+    stdin.write('\r'); // source
+    await new Promise((r) => setTimeout(r, 100));
+    stdin.write('\r'); // project
+    await new Promise((r) => setTimeout(r, 100));
+    stdin.write('\r'); // session
+    await new Promise((r) => setTimeout(r, 100));
+    expect(lastFrame()).toContain('Action');
+    expect(lastFrame()).toContain('Open in CLI');
+    expect(lastFrame()).toContain('Link to Desktop');
+    expect(lastFrame()).toContain('Unlink');
+  });
+});
