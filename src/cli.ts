@@ -1,5 +1,7 @@
 // src/cli.ts
 import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import { realpathSync } from 'node:fs';
 import { Command } from 'commander';
 import { listSessions, type ListSource } from './commands/list.js';
 import { runDoctor } from './commands/doctor.js';
@@ -170,6 +172,16 @@ function pad(s: string, n: number): string {
   return s.length >= n ? s.slice(0, n - 1) + ' ' : s + ' '.repeat(n - s.length);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+function isEntryPoint(): boolean {
+  const argv1 = process.argv[1];
+  if (!argv1) return false;
+  try {
+    return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(argv1);
+  } catch {
+    return false;
+  }
+}
+
+if (isEntryPoint()) {
   main(process.argv).then((c) => process.exit(c));
 }
