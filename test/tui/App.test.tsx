@@ -37,6 +37,7 @@ describe('App', () => {
 describe('App → ProjectStep', () => {
   it('moves to ProjectStep after selecting CLI source', async () => {
     const { lastFrame, stdin } = render(<App />);
+    await new Promise((r) => setTimeout(r, 20)); // let initial useInput listeners attach
     stdin.write('\r'); // Enter on CLI
     await new Promise((r) => setTimeout(r, 50));
     expect(lastFrame()).toContain('Project');
