@@ -49,7 +49,7 @@ export async function buildManifest(opts: BuildManifestOptions): Promise<Desktop
     remoteMcpServersConfig: [],
   };
 
-  if (opts.effortDefault) manifest.effort = opts.effortDefault;
+  if (opts.effortDefault !== undefined) manifest.effort = opts.effortDefault;
 
   const wt = await detectWorktree(cwd);
   if (wt) {

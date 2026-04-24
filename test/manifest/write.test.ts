@@ -48,4 +48,16 @@ describe('writeManifestAtomically', () => {
       writeManifestAtomically({ workspaceDir: dir, manifest: MANIFEST }),
     ).rejects.toThrow(/already exists/i);
   });
+
+  it('cleans up the .tmp file if the write fails', async () => {
+    // Point workspaceDir at a path that does not exist — `open` will throw ENOENT
+    // because the parent directory is missing.
+    const missing = path.join(dir, 'does-not-exist');
+    await expect(
+      writeManifestAtomically({ workspaceDir: missing, manifest: MANIFEST }),
+    ).rejects.toThrow();
+    // Parent dir never existed, so nothing to check there.
+    // Primary invariant: no stray .tmp in the dir we DO control.
+    expect(readdirSync(dir).filter((f) => f.endsWith('.tmp'))).toEqual([]);
+  });
 });

@@ -1,4 +1,4 @@
-import { open, rename, access, constants } from 'node:fs/promises';
+import { open, rename, access, constants, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import type { DesktopManifest } from './types.js';
 
@@ -20,9 +20,12 @@ export async function writeManifestAtomically(opts: WriteManifestOptions): Promi
   try {
     await handle.writeFile(JSON.stringify(opts.manifest, null, 2) + '\n', 'utf-8');
     await handle.sync();
-  } finally {
+  } catch (writeErr) {
     await handle.close();
+    try { await unlink(tmpPath); } catch { /* best-effort cleanup */ }
+    throw writeErr;
   }
+  await handle.close();
   await rename(tmpPath, finalPath);
   return finalPath;
 }
