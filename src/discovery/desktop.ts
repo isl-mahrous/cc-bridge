@@ -25,11 +25,15 @@ export async function loadDesktopManifests(): Promise<LoadedManifest[]> {
     const aAbs = path.join(paths.desktopSessions, a);
     const aSt = await safeStat(aAbs);
     if (!aSt?.isDirectory()) continue;
-    for (const b of await readdir(aAbs)) {
+    let bEntries: string[];
+    try { bEntries = await readdir(aAbs); } catch { continue; }
+    for (const b of bEntries) {
       const bAbs = path.join(aAbs, b);
       const bSt = await safeStat(bAbs);
       if (!bSt?.isDirectory()) continue;
-      for (const f of await readdir(bAbs)) {
+      let fEntries: string[];
+      try { fEntries = await readdir(bAbs); } catch { continue; }
+      for (const f of fEntries) {
         if (!(f.startsWith('local_') && f.endsWith('.json'))) continue;
         const mAbs = path.join(bAbs, f);
         try {

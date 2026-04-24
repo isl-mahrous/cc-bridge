@@ -14,8 +14,8 @@ describe('readJsonlEvents', () => {
     const evs = [];
     for await (const e of readJsonlEvents(fixture)) evs.push(e);
     expect(evs.length).toBe(4);
-    expect(evs[0].type).toBe('permission-mode');
-    expect(evs[1].type).toBe('user');
+    expect(evs[0]!.type).toBe('permission-mode');
+    expect(evs[1]!.type).toBe('user');
   });
 });
 
