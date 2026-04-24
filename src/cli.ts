@@ -1,4 +1,5 @@
 // src/cli.ts
+import { spawnSync } from 'node:child_process';
 import { Command } from 'commander';
 import { listSessions, type ListSource } from './commands/list.js';
 import { runDoctor } from './commands/doctor.js';
@@ -119,6 +120,22 @@ export async function main(argv: readonly string[]): Promise<number> {
         exitCode = 1;
       }
     });
+
+  // If no subcommand, launch the interactive TUI.
+  const hasSubcommand =
+    argv.length > 2 &&
+    !argv[2]!.startsWith('-') &&
+    ['list', 'open', 'link', 'unlink', 'history', 'doctor', 'help'].includes(argv[2]!);
+
+  if (!hasSubcommand && (argv.length === 2 || argv[2] === '--tui')) {
+    const { runTui } = await import('./tui/App.js');
+    const handoff = await runTui();
+    if (handoff) {
+      const child = spawnSync(handoff.command, [...handoff.args], { cwd: handoff.cwd, stdio: 'inherit' });
+      return child.status ?? 0;
+    }
+    return 0;
+  }
 
   try {
     await program.parseAsync([...argv]);
