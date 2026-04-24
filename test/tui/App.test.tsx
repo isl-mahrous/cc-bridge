@@ -33,3 +33,13 @@ describe('App', () => {
     expect(lastFrame()).toContain('Claude Desktop Code');
   });
 });
+
+describe('App → ProjectStep', () => {
+  it('moves to ProjectStep after selecting CLI source', async () => {
+    const { lastFrame, stdin } = render(<App />);
+    stdin.write('\r'); // Enter on CLI
+    await new Promise((r) => setTimeout(r, 50));
+    expect(lastFrame()).toContain('Project');
+    expect(lastFrame()).toContain('/tmp/proj');
+  });
+});
