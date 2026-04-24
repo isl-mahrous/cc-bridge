@@ -8,6 +8,10 @@ import { openSession } from './commands/open.js';
 import { tailHistory } from './commands/history.js';
 import type { SessionSummary } from './discovery/types.js';
 
+class BridgeUserError extends Error {
+  constructor(message: string) { super(message); this.name = 'BridgeUserError'; }
+}
+
 export async function main(argv: readonly string[]): Promise<number> {
   const program = new Command();
   program
@@ -24,15 +28,20 @@ export async function main(argv: readonly string[]): Promise<number> {
     .option('--cwd <path>', 'filter by project cwd')
     .option('--json', 'output JSON instead of a table', false)
     .action(async (opts: { source: string; cwd?: string; json: boolean }) => {
-      if (!['all', 'cli', 'desktop'].includes(opts.source)) {
-        process.stderr.write(`invalid source: ${opts.source}\n`);
-        exitCode = 1; return;
-      }
-      const rows = await listSessions({ source: opts.source as ListSource, cwd: opts.cwd });
-      if (opts.json) {
-        process.stdout.write(JSON.stringify(rows, null, 2));
-      } else {
-        process.stdout.write(formatTable(rows));
+      try {
+        if (!['all', 'cli', 'desktop'].includes(opts.source)) {
+          process.stderr.write(`invalid source: ${opts.source}\n`);
+          exitCode = 1; return;
+        }
+        const rows = await listSessions({ source: opts.source as ListSource, cwd: opts.cwd });
+        if (opts.json) {
+          process.stdout.write(JSON.stringify(rows, null, 2));
+        } else {
+          process.stdout.write(formatTable(rows));
+        }
+      } catch (e: unknown) {
+        process.stderr.write(`${(e as Error).message}\n`);
+        exitCode = 1;
       }
     });
 
@@ -40,7 +49,12 @@ export async function main(argv: readonly string[]): Promise<number> {
     .command('open <cliSessionId>')
     .description("Resume a session in the CLI via 'claude --resume'")
     .action(async (id: string) => {
-      exitCode = await openSession({ cliSessionId: id });
+      try {
+        exitCode = await openSession({ cliSessionId: id });
+      } catch (e: unknown) {
+        process.stderr.write(`${(e as Error).message}\n`);
+        exitCode = 1;
+      }
     });
 
   program
@@ -49,20 +63,30 @@ export async function main(argv: readonly string[]): Promise<number> {
     .option('--title <title>', 'override the auto-extracted title')
     .option('--effort <effort>', 'default effort (high, medium, ...)')
     .action(async (id: string, opts: { title?: string; effort?: string }) => {
-      const r = await linkSession({ cliSessionId: id, title: opts.title, effort: opts.effort });
-      if (r.status === 'linked') process.stdout.write(`linked: ${r.manifestPath}\n`);
-      else if (r.status === 'already-linked-by-us') process.stdout.write(`already linked (by us): ${r.manifestPath}\n`);
-      else process.stdout.write(`already linked (not by us): ${r.manifestPath}\n(refusing to duplicate; use 'unlink' first if you really want to replace.)\n`);
+      try {
+        const r = await linkSession({ cliSessionId: id, title: opts.title, effort: opts.effort });
+        if (r.status === 'linked') process.stdout.write(`linked: ${r.manifestPath}\n`);
+        else if (r.status === 'already-linked-by-us') process.stdout.write(`already linked (by us): ${r.manifestPath}\n`);
+        else process.stdout.write(`already linked (not by us): ${r.manifestPath}\n(refusing to duplicate; use 'unlink' first if you really want to replace.)\n`);
+      } catch (e: unknown) {
+        process.stderr.write(`${(e as Error).message}\n`);
+        exitCode = 1;
+      }
     });
 
   program
     .command('unlink <cliSessionId>')
     .description("Remove Desktop manifests that cc-bridge created for this session")
     .action(async (id: string) => {
-      const r = await unlinkSession({ cliSessionId: id });
-      for (const p of r.removed) process.stdout.write(`removed: ${p}\n`);
-      for (const p of r.skippedForeign) process.stdout.write(`skipped (foreign): ${p}\n`);
-      if (r.removed.length === 0 && r.skippedForeign.length === 0) process.stdout.write('nothing to unlink\n');
+      try {
+        const r = await unlinkSession({ cliSessionId: id });
+        for (const p of r.removed) process.stdout.write(`removed: ${p}\n`);
+        for (const p of r.skippedForeign) process.stdout.write(`skipped (foreign): ${p}\n`);
+        if (r.removed.length === 0 && r.skippedForeign.length === 0) process.stdout.write('nothing to unlink\n');
+      } catch (e: unknown) {
+        process.stderr.write(`${(e as Error).message}\n`);
+        exitCode = 1;
+      }
     });
 
   program
@@ -70,18 +94,28 @@ export async function main(argv: readonly string[]): Promise<number> {
     .description('Print the most recent cc-bridge actions')
     .option('--limit <n>', 'how many entries to show', '20')
     .action(async (opts: { limit: string }) => {
-      const records = await tailHistory({ limit: Number(opts.limit) || 20 });
-      for (const r of records) process.stdout.write(JSON.stringify(r) + '\n');
+      try {
+        const records = await tailHistory({ limit: Number(opts.limit) || 20 });
+        for (const r of records) process.stdout.write(JSON.stringify(r) + '\n');
+      } catch (e: unknown) {
+        process.stderr.write(`${(e as Error).message}\n`);
+        exitCode = 1;
+      }
     });
 
   program
     .command('doctor')
     .description('Check environment prerequisites')
     .action(async () => {
-      const r = await runDoctor();
-      if (r.ok) process.stdout.write('ok\n');
-      else {
-        for (const p of r.problems) process.stdout.write(`- ${p}\n`);
+      try {
+        const r = await runDoctor();
+        if (r.ok) process.stdout.write('ok\n');
+        else {
+          for (const p of r.problems) process.stdout.write(`- ${p}\n`);
+          exitCode = 1;
+        }
+      } catch (e: unknown) {
+        process.stderr.write(`${(e as Error).message}\n`);
         exitCode = 1;
       }
     });
@@ -90,7 +124,7 @@ export async function main(argv: readonly string[]): Promise<number> {
     await program.parseAsync([...argv]);
   } catch (e: unknown) {
     const err = e as { code?: string; message?: string };
-    if (err.code === 'commander.helpDisplayed' || err.code === 'commander.version') return 0;
+    if (err.code === 'commander.helpDisplayed' || err.code === 'commander.help' || err.code === 'commander.version') return 0;
     process.stderr.write(`${err.message ?? String(e)}\n`);
     return 2;
   }

@@ -46,7 +46,12 @@ export async function readHistory(): Promise<HistoryRecord[]> {
     if ((e as NodeJS.ErrnoException).code === 'ENOENT') return [];
     throw e;
   }
-  return raw.split(/\r?\n/).filter(Boolean).map((l) => JSON.parse(l) as HistoryRecord);
+  const lines = raw.split(/\r?\n/).filter(Boolean);
+  const records: HistoryRecord[] = [];
+  for (const l of lines) {
+    try { records.push(JSON.parse(l) as HistoryRecord); } catch { /* skip corrupt line */ }
+  }
+  return records;
 }
 
 export async function manifestsCreatedForCliSession(cliSessionId: string): Promise<string[]> {

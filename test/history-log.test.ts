@@ -1,8 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdir, appendFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { logAction, readHistory, manifestsCreatedForCliSession } from '../src/history-log.js';
+import { resolvePaths } from '../src/paths.js';
 
 let root: string;
 
@@ -32,6 +34,16 @@ describe('history-log', () => {
     await logAction({ action: 'unlink', cliSessionId: 'a', manifestPath: '/m/a.json' });
     const h = await readHistory();
     expect(h.map((r) => r.action)).toEqual(['link', 'unlink']);
+  });
+
+  it('skips corrupt lines without throwing', async () => {
+    const p = resolvePaths();
+    await mkdir(p.bridgeHome, { recursive: true });
+    await appendFile(p.historyLog, '{"not valid json\n', 'utf-8');
+    await logAction({ action: 'link', cliSessionId: 's', manifestPath: '/m/s.json', manifestSessionId: 'local_s', cwd: '/p' });
+    const h = await readHistory();
+    expect(h.length).toBe(1);
+    expect(h[0]!.action).toBe('link');
   });
 });
 

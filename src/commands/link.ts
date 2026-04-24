@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { access, constants } from 'node:fs/promises';
+import { access, constants, readdir } from 'node:fs/promises';
 import { resolvePaths } from '../paths.js';
 import { buildManifest } from '../manifest/build.js';
 import { writeManifestAtomically } from '../manifest/write.js';
@@ -67,7 +67,6 @@ export async function linkSession(opts: LinkOptions): Promise<LinkResult> {
 
 async function locateCliJsonl(cliSessionId: string): Promise<string | null> {
   const paths = resolvePaths();
-  const { readdir } = await import('node:fs/promises');
   let projDirs: string[];
   try { projDirs = await readdir(paths.cliProjects); } catch { return null; }
   for (const d of projDirs) {

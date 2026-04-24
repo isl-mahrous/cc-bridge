@@ -51,4 +51,14 @@ describe('cli', () => {
     const { code } = await capture(() => main(['node', 'cli', 'doctor']));
     expect(code).toBe(1);
   });
+
+  it('exits 0 when called with no subcommand (help display)', async () => {
+    const { code } = await capture(() => main(['node', 'cli']));
+    expect(code).toBe(0);
+  });
+
+  it('exits 1 when link fails (session not found)', async () => {
+    const { code } = await capture(() => main(['node', 'cli', 'link', 'deadbeef-dead-4bee-aaaa-aaaaaaaaaaaa']));
+    expect(code).toBe(1);
+  });
 });
