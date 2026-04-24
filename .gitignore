@@ -3,3 +3,6 @@ dist
 .DS_Store
 *.log
 .cc-bridge-test-root/
+
+# Internal design artifacts (specs, plans, notes) — kept locally, not published.
+docs/
