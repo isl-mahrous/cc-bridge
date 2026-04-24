@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { discoverCliSessions } from '../../src/discovery/cli.js';
+import { discoverCliSessions, withDesktopStatus } from '../../src/discovery/cli.js';
 
 let root: string;
 
@@ -49,5 +49,33 @@ describe('discoverCliSessions', () => {
   it('filters by cwd when option provided', async () => {
     const rows = await discoverCliSessions({ cwd: '/nope' });
     expect(rows).toEqual([]);
+  });
+});
+
+describe('withDesktopStatus', () => {
+  it('marks CLI rows whose cliSessionId matches a Desktop manifest', async () => {
+    const ds = path.join(
+      process.env.CC_BRIDGE_TEST_ROOT!,
+      'Library/Application Support/Claude/claude-code-sessions/w-a/w-b',
+    );
+    mkdirSync(ds, { recursive: true });
+    writeFileSync(path.join(ds, 'local_match.json'), JSON.stringify({
+      sessionId: 'local_match',
+      cliSessionId: 'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa',
+      cwd: '/tmp/proj',
+      originCwd: '/tmp/proj',
+      createdAt: 0,
+      lastActivityAt: 0,
+      model: 'claude-sonnet-4-6',
+      isArchived: false,
+      title: 'Mirror',
+      permissionMode: 'default',
+      enabledMcpTools: {},
+      remoteMcpServersConfig: [],
+    }));
+    const rows = await discoverCliSessions();
+    const enriched = await withDesktopStatus(rows);
+    expect(enriched[0]!.hasBridgeManifest).toBe(true);
+    expect(enriched[0]!.manifestPath!.endsWith('local_match.json')).toBe(true);
   });
 });

@@ -2,6 +2,7 @@ import { readdir, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { resolvePaths } from '../paths.js';
 import { summarize, extractTitle } from '../jsonl.js';
+import { loadDesktopManifests } from './desktop.js';
 import type { SessionSummary } from './types.js';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -58,4 +59,15 @@ function decodeProjectDir(encoded: string): string {
   // The CLI replaces both `/` and `.` with `-`. We can't perfectly invert that,
   // so return the best guess as an absolute path with `/` substitutions.
   return '/' + encoded.replace(/^-/, '').replace(/-/g, '/');
+}
+
+export async function withDesktopStatus(rows: SessionSummary[]): Promise<SessionSummary[]> {
+  const loaded = await loadDesktopManifests();
+  const byCliId = new Map<string, string>(); // cliSessionId -> manifestPath
+  for (const l of loaded) byCliId.set(l.manifest.cliSessionId, l.manifestPath);
+  return rows.map((r) => {
+    const mp = byCliId.get(r.cliSessionId);
+    if (!mp) return r;
+    return { ...r, hasBridgeManifest: true, manifestPath: mp };
+  });
 }
