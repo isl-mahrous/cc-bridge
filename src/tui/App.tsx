@@ -34,8 +34,14 @@ export interface AppProps {
 export const App: React.FC<AppProps> = ({ onExit }) => {
   const { exit } = useApp();
   const [step, setStep] = React.useState<Step>({ kind: 'source' });
+  const [searchingInSession, setSearchingInSession] = React.useState(false);
+
+  React.useEffect(() => {
+    if (step.kind !== 'session') setSearchingInSession(false);
+  }, [step]);
+
   useInput((input) => {
-    if (input === 'q') {
+    if (input === 'q' && !searchingInSession) {
       onExit?.(null);
       exit();
     }
@@ -50,7 +56,9 @@ export const App: React.FC<AppProps> = ({ onExit }) => {
   if (step.kind === 'session') return (
     <SessionStep source={step.source} cwd={step.cwd}
       onPick={(row) => setStep({ kind: 'action', row })}
-      onBack={() => setStep({ kind: 'project', source: step.source })} />
+      onBack={() => setStep({ kind: 'project', source: step.source })}
+      onSearchingChange={setSearchingInSession}
+    />
   );
   if (step.kind === 'action') return (
     <ActionStep row={step.row}
@@ -71,7 +79,7 @@ export const App: React.FC<AppProps> = ({ onExit }) => {
           setStep({ kind: 'result', message: `error: ${(e as Error).message}` });
         }
       }}
-      onBack={() => setStep({ kind: 'session', source: 'cli', cwd: step.row.cwd })}
+      onBack={() => setStep({ kind: 'session', source: step.row.surface, cwd: step.row.cwd })}
     />
   );
   return (

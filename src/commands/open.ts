@@ -24,11 +24,17 @@ export async function buildOpenInvocation(opts: BuildOpenOptions): Promise<OpenI
 
 export async function openSession(opts: BuildOpenOptions): Promise<number> {
   const inv = await buildOpenInvocation(opts);
-  await logAction({ action: 'open', cliSessionId: opts.cliSessionId, cwd: inv.cwd });
   const spawnOpts: SpawnOptions = { cwd: inv.cwd, stdio: 'inherit' };
   return await new Promise<number>((resolve, reject) => {
     const child = spawn(inv.command, [...inv.args], spawnOpts);
+    let spawned = false;
+    child.on('spawn', () => { spawned = true; });
     child.on('error', reject);
-    child.on('exit', (code) => resolve(code ?? 0));
+    child.on('exit', async (code) => {
+      if (spawned) {
+        await logAction({ action: 'open', cliSessionId: opts.cliSessionId, cwd: inv.cwd });
+      }
+      resolve(code ?? 0);
+    });
   });
 }

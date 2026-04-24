@@ -10,9 +10,10 @@ export interface SessionStepProps {
   readonly cwd: string | null;
   readonly onPick: (row: SessionSummary) => void;
   readonly onBack: () => void;
+  readonly onSearchingChange?: (searching: boolean) => void;
 }
 
-export const SessionStep: React.FC<SessionStepProps> = ({ source, cwd, onPick, onBack }) => {
+export const SessionStep: React.FC<SessionStepProps> = ({ source, cwd, onPick, onBack, onSearchingChange }) => {
   const [loading, setLoading] = React.useState(true);
   const [rows, setRows] = React.useState<SessionSummary[]>([]);
   const [index, setIndex] = React.useState(0);
@@ -36,6 +37,10 @@ export const SessionStep: React.FC<SessionStepProps> = ({ source, cwd, onPick, o
         r.cliSessionId.toLowerCase().startsWith(q),
     );
   }, [rows, query]);
+
+  React.useEffect(() => { setIndex(0); }, [query]);
+
+  React.useEffect(() => { onSearchingChange?.(searching); }, [searching, onSearchingChange]);
 
   useInput((input, key) => {
     if (loading) return;
